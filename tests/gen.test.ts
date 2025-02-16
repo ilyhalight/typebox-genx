@@ -10,7 +10,7 @@ export type Test = {
   method: RequestMethod;
 };`;
   const genx = new GenX({
-    root: path.join(__dirname),
+    root: path.join(__dirname, "..", "examples"),
   });
   const result = await genx.generateByCode(code);
   expect(result).toEqual(`import { Type, Static } from '@sinclair/typebox'
