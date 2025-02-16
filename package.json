@@ -1,0 +1,80 @@
+{
+  "name": "@toil/typebox-genx",
+  "description": "Code generation tool that extends `@sinclair/typebox-codegen` package with import functionality",
+  "homepage": "https://github.com/ilyhalight/typebox-genx",
+  "version": "0.0.1",
+  "license": "MIT",
+  "author": "Toil",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ilyhalight/typebox-genx",
+    "directory": "packages/shared"
+  },
+  "bugs": {
+    "url": "https://github.com/ilyhalight/typebox-genx/issues"
+  },
+  "exports": {
+    ".": {
+      "require": "./dist/index.js",
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./client": {
+      "require": "./dist/client.js",
+      "import": "./dist/client.js",
+      "types": "./dist/client.d.ts"
+    },
+    "./types": {
+      "require": "./dist/types.js",
+      "import": "./dist/types.js",
+      "types": "./dist/types.d.ts"
+    }
+  },
+  "keywords": [
+    "typebox",
+    "codegen",
+    "genx",
+    "extended",
+    "import"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "files": [
+    "dist"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "@types/eslint__js": "^8.42.3",
+    "eslint": "^9.20.1",
+    "eslint-plugin-oxlint": "^0.15.11",
+    "husky": "^9.1.7",
+    "oxlint": "^0.15.11",
+    "prettier": "^3.5.1",
+    "tsc-esm-fix": "^3.1.2",
+    "typedoc": "^0.27.7",
+    "typedoc-plugin-rename-defaults": "^0.7.2",
+    "typescript-eslint": "^8.24.0"
+  },
+  "peerDependencies": {
+    "typescript": "^5.0.0"
+  },
+  "dependencies": {
+    "@sinclair/typebox-codegen": "^0.10.5",
+    "ts-morph": "^25.0.1"
+  },
+  "scripts": {
+    "build:bun": "bun run ./scripts/build.ts",
+    "build:doc": "typedoc --options .config/typedoc.json --tsconfig tsconfig.build.json",
+    "build:all": "bun build:bun && bun build:doc",
+    "lint": "bunx oxlint --ignore-path=.oxlintignore && bunx eslint",
+    "prepare": "husky"
+  }
+}
