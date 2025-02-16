@@ -21,6 +21,9 @@ jobs:
       - name: Install packages 🔧
         run: bun install
 
+      - name: Pre-test
+        run: cd examples && bun install && cd ..
+
       - name: Test 🎲
         run: bun test
 
