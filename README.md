@@ -51,7 +51,7 @@ import Client, { ClientOpts } from "@vot.js/node";
 import "@vot.js/node";
 ```
 
-Now `typeof variable` unsupported too
+Now `typeof variable` and work with workspaces unsupported too
 
 ## Getting started
 
