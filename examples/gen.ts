@@ -16,4 +16,8 @@ const code = await genx.generateByDir(
   path.join(__dirname, "dist"),
 );
 
+// const code = await genx.generateByCode(
+//   `export type FetchFunction = (input: string | URL | Request, init?: any) => Promise<Response>;`
+// );
+
 console.log(code);
