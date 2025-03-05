@@ -10,7 +10,7 @@ export type Test = {
   method: RequestMethod;
 };`;
   const genx = new GenX({
-    root: path.join(__dirname, "..", "examples"),
+    root: path.join(__dirname, ".."),
   });
   const result = await genx.generateByCode(code);
   expect(result).toEqual(`import { Type, Static } from '@sinclair/typebox'
@@ -28,5 +28,40 @@ Type.Literal("PATCH")
 export type Test = Static<typeof Test>
 export const Test = Type.Object({
 method: RequestMethod
+})`);
+});
+
+test("gen code with workspaces", async () => {
+  const code = `import type { SecondB } from "@tests/b";
+import type { ThirdC } from "@tests/c";
+
+export type Data = {
+  hello: "world";
+  meta: SecondB;
+  other: ThirdC;
+};`;
+  const genx = new GenX({
+    root: path.join(__dirname, "..", "examples", "packages", "testa"),
+    workspaceRoot: path.join(__dirname, "..", "examples"),
+  });
+  const result = await genx.generateByCode(code);
+  expect(result).toEqual(`import { Type, Static } from '@sinclair/typebox'
+
+
+export type ThirdC = Static<typeof ThirdC>
+export const ThirdC = Type.Object({
+likes: Type.Number()
+})
+
+export type SecondB = Static<typeof SecondB>
+export const SecondB = Type.Object({
+views: Type.Number()
+})
+
+export type Data = Static<typeof Data>
+export const Data = Type.Object({
+hello: Type.Literal("world"),
+meta: SecondB,
+other: ThirdC
 })`);
 });
