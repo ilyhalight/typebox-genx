@@ -51,7 +51,7 @@ import Client, { ClientOpts } from "@vot.js/node";
 import "@vot.js/node";
 ```
 
-Сейчас `typeof variable` и работа с workspaces тоже не поддерживается
+Сейчас `typeof variable` тоже не поддерживается
 
 ## Начало работы
 
@@ -85,6 +85,17 @@ const codeByStr = await genx.generateByCode(raw);
 
 // clear saved imports and depends list if needed
 genx.clearData();
+
+// create client for enabled workspaces
+const genxw = new GenX({
+  root: path.join(__dirname, "packages", "packageA"),
+  workspaceRoot: path.join(__dirname),
+});
+
+await genx.generateByDir(
+  path.join(__dirname, "packages", "packageA"),
+  path.join(__dirname, "dist"),
+);
 ```
 
 ## Сборка
