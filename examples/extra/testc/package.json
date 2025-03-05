@@ -1,16 +1,13 @@
 {
-  "name": "tests",
+  "name": "@tests/c",
   "module": "index.ts",
+  "type": "module",
   "devDependencies": {
-    "@toil/translate": "^1.0.6",
     "@types/bun": "latest"
   },
   "peerDependencies": {
     "typescript": "^5.0.0"
   },
-  "type": "module",
-  "workspaces": [
-    "packages/*",
-    "extra/testc"
-  ]
+  "main": "./index.ts",
+  "types": "./index.ts"
 }

@@ -1,0 +1,17 @@
+{
+  "name": "@tests/a",
+  "module": "index.ts",
+  "type": "module",
+  "devDependencies": {
+    "@types/bun": "latest"
+  },
+  "peerDependencies": {
+    "typescript": "^5.0.0"
+  },
+  "dependencies": {
+    "@tests/b": "workspace:^",
+    "@tests/c": "workspace:^"
+  },
+  "main": "./index.ts",
+  "types": "./index.ts"
+}
