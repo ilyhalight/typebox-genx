@@ -28,5 +28,5 @@
     "outDir": "./dist",
     "removeComments": true
   },
-  "exclude": ["**/dist", "**/docs", "**/tests", "**/node_modules", "./scripts"]
+  "include": ["./src"]
 }
