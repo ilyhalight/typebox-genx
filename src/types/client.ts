@@ -1,3 +1,5 @@
+import type { ExportItem } from "./utils";
+
 export type ImportMatches = [
   plain: string,
   // full content matched part
@@ -51,4 +53,10 @@ export type ImportData = ImportDefaultData | ImportAllData | ImportSomeData;
 export type GenXOpts = {
   root: string;
   includeNearbyFiles?: boolean;
+  workspaceRoot?: string;
+};
+
+export type PackageExport = {
+  regex: RegExp;
+  paths: ExportItem;
 };
