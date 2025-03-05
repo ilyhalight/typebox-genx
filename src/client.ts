@@ -10,7 +10,9 @@ import type {
   ImportData,
   ImportMatches,
   ImportSomeItem,
-} from "./types";
+  PackageExport,
+} from "./types/client";
+import type { PackageJson } from "./types/utils";
 
 export const importRegex =
   /import\s*((type\s*)?\{([^}]+)\}|(\*\s*as\s+(\w+))|(\w+))\s*from\s*["']([^"']+)["']/;
@@ -18,13 +20,31 @@ export const importRegex =
 export default class GenX {
   root: string;
   includeNearbyFiles: boolean;
+  workspaceRoot?: string;
 
-  rootDepends = new Map();
+  rootDepends = new Map<string, string>();
   imports = new Map<string, Map<string, string>>();
 
-  constructor({ root, includeNearbyFiles = false }: GenXOpts) {
+  constructor({
+    root,
+    includeNearbyFiles = false,
+    workspaceRoot = undefined,
+  }: GenXOpts) {
     this.root = root;
     this.includeNearbyFiles = includeNearbyFiles;
+    this.workspaceRoot = workspaceRoot;
+  }
+
+  private async getPackageJson(root: string) {
+    try {
+      const content = await fs.readFile(path.resolve(root, "package.json"), {
+        encoding: "utf8",
+      });
+      return JSON.parse(content) as PackageJson;
+    } catch (err) {
+      console.error("Failed to read package.json", (err as Error).message);
+      return {};
+    }
   }
 
   private async getRootDepends() {
@@ -32,10 +52,7 @@ export default class GenX {
       return this.rootDepends;
     }
 
-    const content = await fs.readFile(path.resolve(this.root, "package.json"), {
-      encoding: "utf8",
-    });
-    const packageJSON = JSON.parse(content);
+    const packageJSON = await this.getPackageJson(this.root);
     const {
       devDependencies = {},
       peerDependencies = {},
@@ -95,7 +112,8 @@ export default class GenX {
 
   private updateImports(filePath: string, item: string) {
     const importPath = GenX.calcFilePath(filePath);
-    const oldImports = this.imports.get(importPath) ?? new Map();
+    const oldImports =
+      this.imports.get(importPath) ?? new Map<string, string>();
     this.imports.set(
       importPath,
       oldImports.set(item, this.readTypeAliasContent(importPath, item)),
@@ -105,7 +123,7 @@ export default class GenX {
 
   private readTSData(filePath: string, item: string) {
     const items = this.imports.get(GenX.calcFilePath(filePath));
-    if (items && items.has(item)) {
+    if (items?.has(item)) {
       console.warn("Item already exists");
       return "";
     }
@@ -142,7 +160,7 @@ export default class GenX {
     return exports
       .replace(/^\./, "")
       .replace(/[-[\]{}()+?.,\\^$|#\s]/g, "\\$&")
-      .replace("*", "(.*)");
+      .replaceAll("*", "(.*)");
   }
 
   private getImportedContent(filePath: string) {
@@ -167,32 +185,49 @@ export default class GenX {
       : "";
   }
 
-  private async getImportFromPackage(packageName: string, data: ImportData) {
+  private exportToRegex(path: string) {
+    const clearKey = GenX.fixPackageExport(path);
+    return new RegExp(`^${clearKey}$`);
+  }
+
+  private async getImportFromPackage(
+    packageName: string,
+    data: ImportData,
+    root: string = this.root,
+  ) {
     if (data.type !== "some") {
       throw new Error("Not implemented");
     }
 
-    const packagePath = path.resolve(this.root, "node_modules", packageName);
-    const packageJSONContent = await fs.readFile(
-      path.join(packagePath, "package.json"),
-      { encoding: "utf8" },
+    const packagePath = path.resolve(root, "node_modules", packageName);
+    const {
+      exports = {},
+      main,
+      module,
+      types,
+    } = await this.getPackageJson(packagePath);
+    const usefulExports = Object.entries(exports).map<[string, PackageExport]>(
+      ([key, value]) => {
+        const regex = this.exportToRegex(key);
+        return [key, { regex, paths: value }];
+      },
     );
-    const packageJSON = JSON.parse(packageJSONContent);
-    const { exports = {} } = packageJSON;
-
-    const usefulExports = Object.entries(exports).map(([key, value]) => {
-      const clearKey = GenX.fixPackageExport(key);
-      const keyRe = new RegExp(`^${clearKey}$`);
-
-      return [key, { regex: keyRe, paths: value }] as {
-        regex: RegExp;
-        paths: {
-          require: string;
-          import: string;
-          types: string;
-        };
-      }[];
-    });
+    if (
+      !usefulExports.find(([exportName]) => exportName === ".") &&
+      (main || module || types)
+    ) {
+      usefulExports.push([
+        ".",
+        {
+          regex: this.exportToRegex("."),
+          paths: {
+            import: module,
+            require: main,
+            types,
+          },
+        },
+      ]);
+    }
 
     const relativeFromPath = data.from.replace(packageName, "");
     const matchedExport = usefulExports.find(([, value]) =>
@@ -204,6 +239,10 @@ export default class GenX {
 
     const exportParts = matchedExport[1].regex.exec(relativeFromPath)?.slice(1);
     let typeFilePath = matchedExport[1].paths.types;
+    if (!typeFilePath) {
+      throw new Error(`Not found type file for ${matchedExport[0]} export`);
+    }
+
     while (exportParts?.length && typeFilePath.includes("*")) {
       typeFilePath = typeFilePath.replace("*", exportParts.shift()!);
     }
@@ -216,7 +255,7 @@ export default class GenX {
     return this.getImportedContent(newFilePath);
   }
 
-  private async getImportFromProject(filePath: string, data: ImportData) {
+  private getImportFromProject(filePath: string, data: ImportData) {
     if (data.type !== "some") {
       throw new Error("Not implemented yet");
     }
@@ -305,8 +344,18 @@ export default class GenX {
       const packageName = depends
         .keys()
         .find((depend) => data.from.startsWith(depend));
-      if (packageName) {
-        return await this.getImportFromPackage(packageName, data);
+      if (
+        this.workspaceRoot &&
+        packageName &&
+        depends.get(packageName)?.startsWith("workspace")
+      ) {
+        return await this.getImportFromPackage(
+          packageName,
+          data,
+          this.workspaceRoot,
+        );
+      } else if (packageName) {
+        return await this.getImportFromPackage(packageName, data, this.root);
       }
 
       if (!this.includeNearbyFiles || !filePath) {
@@ -314,7 +363,7 @@ export default class GenX {
         return "";
       }
 
-      return await this.getImportFromProject(filePath, data);
+      return this.getImportFromProject(filePath, data);
     } catch (err) {
       console.error(
         `Failed to get import content, because ${(err as Error).message}`,
@@ -329,7 +378,7 @@ export default class GenX {
   async generateByCode(code: string, filePath = "") {
     const imports = Array.from(code.matchAll(new RegExp(importRegex, "g")));
     const inlineImports = [];
-    for await (const importLine of imports) {
+    for (const importLine of imports) {
       const importContent = await this.getImportContent(
         importLine[0],
         filePath,
@@ -364,7 +413,7 @@ export default class GenX {
     const files = (await fs.readdir(inputDir)).filter((file) =>
       file.endsWith(".ts"),
     );
-    for await (const file of files) {
+    for (const file of files) {
       const filePath = path.resolve(inputDir, file);
       const typeboxCode = await this.generateByFile(filePath);
 
