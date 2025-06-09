@@ -55,7 +55,7 @@
     "@toil/translate": "^1.0.6",
     "@types/bun": "latest",
     "eslint": "^9.21.0",
-    "eslint-plugin-oxlint": "^0.16.3",
+    "eslint-plugin-oxlint": "^0.18.0",
     "husky": "^9.1.7",
     "oxlint": "^0.16.3",
     "prettier": "^3.5.3",
